@@ -33,21 +33,6 @@ trace_data <- trace_data_full[`t_{inf}` >= 0]
 # add dimensional time so we can plot against it
 trace_data[, t_inf_h := 0.6944444444 * `t_{inf}`]
 
-trace_data_long <- melt(
-  trace_data,
-  measure.vars = c(
-    "C_u^{tot}",
-    "C_b^{tot}",
-    "C_s^{tot}",
-    "phi_i^{tot}",
-    "phi_m^{tot}",
-    "phi_{C_u}^{tot}",
-    "phi_{C_b}^{tot}",
-    "-F_{phi_i}(x=1)",
-    "-F_{phi_{C_b}}(x=0)"
-  )
-)
-
 integrated_fluxes <- calculate_integrated_fluxes(trace_data)
 integrated_fluxes[, net_change := cells_in - cells_out]
 
