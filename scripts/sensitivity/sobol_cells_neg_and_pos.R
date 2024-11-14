@@ -6,56 +6,36 @@ library(GGally)
 
 source("scripts/sensitivity/functions.R")
 
-#theme_set(theme_cowplot(font_size = 17))
 theme_set(theme_cowplot())
 
 sobol_neg_and_pos <- function() {
-
   # Functions
   # ---------
   load_trace_data <- function(pos = FALSE) {
-    # Set the seed manually so multiple calls generate the same param samples
-    set.seed(12345L)
-
     # Set the (global, hence <<-) pe variable, and the data dir, to the
     # appropriate value
     if (pos) {
       pe <<- 5.0
-      res_dir_base <- "res_sensitivity_1000_pe_5_traces_only"
+      res_dir_base <- "res_sensitivity_1000_pe_5_inhib_trace_only"
     } else {
       pe <<- -5.0
-      res_dir_base <- "res_sensitivity_1000_pe_-5_traces_only"
+      res_dir_base <- "res_sensitivity_1000_pe_-5_inhib_trace_only"
     }
 
-    # Min/max for the parameters we're varying
-    j_phi_i_i_factor_min <- 1.0
-    j_phi_i_i_factor_max <- 1000.0
-    m_i_factor_min <- 1.0
-    m_i_factor_max <- 1000.0
-    t_j_phi_i_lag_min <- 0.0
-    t_j_phi_i_lag_max <- 25.0
-    gamma_min <- 0.0
-    gamma_max <- 10.0
+    # The names of the params that are being varied
+    param_names <- c("j_phi_i_i_factor", "m_i_factor", "t_j_phi_i_lag")
 
-    names <- c("j_phi_i_i_factor", "m_i_factor", "t_j_phi_i_lag", "gamma")
-    mins <- c(
-      j_phi_i_i_factor_min,
-      m_i_factor_min,
-      t_j_phi_i_lag_min,
-      gamma_min
-    )
-    maxs <- c(j_phi_i_i_factor_max,
-      m_i_factor_max,
-      t_j_phi_i_lag_max,
-      gamma_max
-    )
-
+    # Read the parameters from file
     x <- readRDS(paste(res_dir_base, "param_sample.rds", sep = "/"))
     n_param_sample <- x$n_param_sample
     param_sample <- x$param_sample
     param_sample_dt <- x$param_sample_dt
 
     trace_data_full <- read_trace_data(param_sample_dt, res_dir_base)
+
+    # Calculate the total cell outflux as the sum of the fluxes of the three different cell types
+    trace_data_full[, cell_outflux := `-F_{phi_{C_u}}(x=0)` + `-F_{phi_{C_b}}(x=0)` + `-F_{phi_{C_s}}(x=0)`]
+
     trace_data <- trace_data_full[`t_{inf}` >= 0]
 
     list(
@@ -63,76 +43,11 @@ sobol_neg_and_pos <- function() {
       param_sample = param_sample,
       param_sample_dt = param_sample_dt,
       trace_data = trace_data,
-      param_names = names
+      param_names = param_names
     )
   }
 
   sobol_indices_cells_panel <- function(
-    ind_neg,
-    ind_pos,
-    title,
-    first_plot = TRUE
-  ) {
-    ind_neg$results[, pe := "neg"]
-    ind_pos$results[, pe := "pos"]
-    data <- rbind(ind_neg$results, ind_pos$results)
-    data[, factor(
-      parameters,
-      levels = c("j_phi_i_i_factor", "m_i_factor", "t_j_phi_i_lag", "gamma")
-    )]
-
-    y_label <- if (first_plot) {
-      "Sobol index"
-    } else {
-      NULL
-    }
-
-    p <- ggplot(
-      data,
-      aes(
-        x = parameters,
-        y = original,
-        ymin = low.ci,
-        ymax = high.ci,
-        shape = sensitivity,
-        colour = pe
-      )
-    ) +
-      geom_point(size = 2.5, position = position_dodge(width = 0.6)) +
-      geom_errorbar(width = 0.5, position = position_dodge(width = 0.6)) +
-      scale_x_discrete(labels = param_labels_words_no_breaks) +
-      scale_shape_discrete(
-        labels = c("Si" = "First-order", "Ti" = "Total-order")
-      ) +
-      scale_colour_discrete(
-        labels = c("pos" = expression(Pe == 5), "neg" = expression(Pe == -5))
-      ) +
-      coord_cartesian(ylim = c(0.0, 1.0)) +
-      labs(
-        x = NULL,
-        y = y_label,
-        shape = "Sobol index",
-        colour = "Flow",
-        title = title
-      ) +
-      theme(
-        plot.title = element_text(hjust = 0.5),
-        legend.text.align = 0,
-        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
-      )
-
-    if (!first_plot) {
-      p <- p + theme(
-        #axis.line.y = element_blank(),
-        #axis.ticks.y = element_blank(),
-        axis.text.y = element_blank()
-      )
-    }
-
-    p
-  }
-
-  sobol_indices_cells_panel_2 <- function(
     ind_neg,
     ind_pos
   ) {
@@ -141,42 +56,42 @@ sobol_neg_and_pos <- function() {
     data <- rbind(ind_neg$results, ind_pos$results)
     data[, factor(
       parameters,
-      levels = c("j_phi_i_i_factor", "m_i_factor", "t_j_phi_i_lag", "gamma")
+      levels = c("j_phi_i_i_factor", "m_i_factor", "t_j_phi_i_lag")
     )]
 
-    y_label <- "Sobol index"
+    x_label <- "Sobol index"
 
     p <- ggplot(
       data,
       aes(
-        x = parameters,
-        y = original,
-        ymin = low.ci,
-        ymax = high.ci,
+        x = original,
+        y = parameters,
+        xmin = low.ci,
+        xmax = high.ci,
         shape = sensitivity,
         colour = pe
       )
     ) +
       geom_point(size = 2.5, position = position_dodge(width = 0.6)) +
       geom_errorbar(width = 0.5, position = position_dodge(width = 0.6)) +
-      scale_x_discrete(labels = param_labels_words_no_breaks) +
+      scale_y_discrete(labels = param_labels_words_no_breaks, limits = rev) +
       scale_shape_discrete(
         labels = c("Si" = "First-order", "Ti" = "Total-order")
       ) +
       scale_colour_discrete(
         labels = c("pos" = expression(Pe == 5), "neg" = expression(Pe == -5))
       ) +
-      coord_cartesian(ylim = c(0.0, 1.2)) +
+      coord_cartesian(xlim = c(0.0, 1.2)) +
       labs(
-        x = NULL,
-        y = y_label,
+        x = x_label,
+        y = NULL,
         shape = "Sobol index",
         colour = "Flow"
       ) +
       theme(
         plot.title = element_text(hjust = 0.5),
-        legend.text.align = 0,
-        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+        legend.text.align = 0 #,
+        #axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
       )
 
     p
@@ -188,7 +103,6 @@ sobol_neg_and_pos <- function() {
       .(j_phi_i_i_factor,
         m_i_factor,
         t_j_phi_i_lag,
-        gamma,
         cells_in = integrated_fluxes[, cells_in],
         cells_out = integrated_fluxes[, cells_out],
         net_change = integrated_fluxes[, net_change]
@@ -201,8 +115,7 @@ sobol_neg_and_pos <- function() {
         measure.vars = c(
           "j_phi_i_i_factor",
           "m_i_factor",
-          "t_j_phi_i_lag",
-          "gamma"
+          "t_j_phi_i_lag"
         ),
         variable.name = "param",
         value.name = "param_value"
@@ -243,16 +156,16 @@ sobol_neg_and_pos <- function() {
         )
       ) +
       theme(
-        strip.background = element_blank(),
-        strip.placement = "outside",
-        legend.text.align = 0,
+        #strip.background = element_blank(),
+        #strip.placement = "outside",
+        #legend.text.align = 0,
         # TODO re-enable the legend but find a better place to fit it in - it's
         # on the RHS at the moment and squeezes the plots a lot
         legend.position = "none"
       )
 
       if (variable_str == "net_change") {
-        p <- p + geom_hline(yintercept = 0, linetype = "dashed")
+        p <- p + geom_vline(xintercept = 0, linetype = "dashed")
       }
 
       p
@@ -293,10 +206,6 @@ sobol_neg_and_pos <- function() {
   )
 
   p_sobol_indices_cells_in <- sobol_indices_cells_panel(
-    ind_neg, ind_pos, "Cells in", first_plot = TRUE
-  )
-
-  p_sobol_indices_cells_in_2 <- sobol_indices_cells_panel_2(
     ind_neg, ind_pos
   )
 
@@ -322,10 +231,6 @@ sobol_neg_and_pos <- function() {
   )
 
   p_sobol_indices_cells_out <- sobol_indices_cells_panel(
-    ind_neg, ind_pos, "Cells out", first_plot = TRUE
-  )
-
-  p_sobol_indices_cells_out_2 <- sobol_indices_cells_panel_2(
     ind_neg, ind_pos
   )
 
@@ -351,17 +256,8 @@ sobol_neg_and_pos <- function() {
   )
 
   p_sobol_indices_net_change <- sobol_indices_cells_panel(
-    ind_neg, ind_pos, "Net change", first_plot = TRUE
-  )
-
-  p_sobol_indices_net_change_2 <- sobol_indices_cells_panel_2(
     ind_neg, ind_pos
   )
-
-  p_sobol_indices_cells <- p_sobol_indices_cells_in +
-    p_sobol_indices_cells_out +
-    p_sobol_indices_net_change +
-    plot_layout(guides = "collect")
 
   # Cell vs params
   cells_vs_params_long_neg <- cells_vs_params_long(
@@ -408,17 +304,16 @@ sobol_neg_and_pos <- function() {
   }
 
   list(
-    p_sobol_indices_cells,
     p_cells_in_panels,
     p_cells_out_panels,
     p_net_change_panels,
-    p_sobol_indices_cells_in_2,
-    p_sobol_indices_cells_out_2,
-    p_sobol_indices_net_change_2
+    p_sobol_indices_cells_in,
+    p_sobol_indices_cells_out,
+    p_sobol_indices_net_change
   )
 }
 
-plot_dir <- "plots_neg_and_pos"
+plot_dir <- "plots_neg_and_pos_inhib"
 
 if (!dir.exists(plot_dir)) {
   dir.create(plot_dir, recursive = TRUE)
@@ -426,89 +321,42 @@ if (!dir.exists(plot_dir)) {
 
 plots <- sobol_neg_and_pos()
 
-p_sobol_neg_and_pos <- plots[[1]]
-p_sobol_neg_and_pos
+p_cells_in_panels <- plots[[1]]
+p_cells_out_panels <- plots[[2]]
+p_net_change_panels <- plots[[3]]
+p_sobol_indices_cells_in <- plots[[4]]
+p_sobol_indices_cells_out <- plots[[5]]
+p_sobol_indices_net_change <- plots[[6]]
+
+## Hacks to get things to line up better
+#nudge_tag <- theme(plot.tag.position = c(-0.04, 1))
+#nudge_x_axis_label <- theme(
+  #axis.title.x = element_text(margin = margin(-88, 0, 0, 0))
+#)
+
+p_sobol_and_cells_combined <- p_sobol_indices_cells_in +
+  labs(tag = "A", title = "Cells in") +
+  plot_spacer() +
+  p_cells_in_panels[[1]] +
+  p_cells_in_panels[[2]] +
+  p_cells_in_panels[[3]] +
+  p_sobol_indices_cells_out +
+  labs(tag = "B", title = "Cells out") +
+  plot_spacer() +
+  p_cells_out_panels[[1]] +
+  p_cells_out_panels[[2]] +
+  p_cells_out_panels[[3]] +
+  p_sobol_indices_net_change +
+  labs(tag = "C", title = "Net change") +
+  plot_spacer() +
+  p_net_change_panels[[1]] +
+  p_net_change_panels[[2]] +
+  p_net_change_panels[[3]] +
+  plot_layout(ncol = 5, nrow = 3, widths = c(1, 0.2, 1, 1, 1), guides = "collect", axis_title = "collect")
 
 ggsave_with_defaults(
-  plot = p_sobol_neg_and_pos,
-  paste(plot_dir, "sobol_indices_cells.pdf", sep = "/")
-)
-
-p_cells_in_panels <- plots[[2]]
-p_cells_out_panels <- plots[[3]]
-p_net_change_panels <- plots[[4]]
-p_sobol_indices_cells_in_2 <- plots[[5]]
-p_sobol_indices_cells_out_2 <- plots[[6]]
-p_sobol_indices_net_change_2 <- plots[[7]]
-
-# Hacks to get things to line up better
-nudge_tag <- theme(plot.tag.position = c(-0.04, 1))
-nudge_x_axis_label <- theme(
-  axis.title.x = element_text(margin = margin(-88, 0, 0, 0))
-)
-
-p_sobol_and_cells_in <-
-  p_sobol_indices_cells_in_2 +
-    theme(legend.position = c(0.5, 0.80)) +
-    (
-      (p_cells_in_panels[[1]] | p_cells_in_panels[[2]]) /
-        (p_cells_in_panels[[3]] + nudge_x_axis_label |
-          p_cells_in_panels[[4]] + nudge_x_axis_label) +
-        plot_layout(guides = "collect") &
-        nudge_tag &
-        labs(y = "Cells in")
-    ) +
-    plot_layout(widths = c(1.0 / 3.0, 2.0 / 3.0)) +
-    plot_annotation(tag_levels = "A") &
-    theme(
-      plot.tag = element_text(hjust = 0, vjust = 0)
-    )
-
-ggsave_with_defaults(
-  plot = p_sobol_and_cells_in,
-  paste(plot_dir, "sobol_and_cells_in.pdf", sep = "/")
-)
-
-p_sobol_and_cells_out <-
-  p_sobol_indices_cells_out_2 +
-    theme(legend.position = c(0.5, 0.80)) +
-    (
-      (p_cells_out_panels[[1]] | p_cells_out_panels[[2]]) /
-        (p_cells_out_panels[[3]] + nudge_x_axis_label |
-          p_cells_out_panels[[4]] + nudge_x_axis_label) +
-        plot_layout(guides = "collect") &
-        nudge_tag &
-        labs(y = "Cells out")
-    ) +
-    plot_layout(widths = c(1.0 / 3.0, 2.0 / 3.0)) +
-    plot_annotation(tag_levels = "A") &
-    theme(
-      plot.tag = element_text(hjust = 0, vjust = 0)
-    )
-
-ggsave_with_defaults(
-  plot = p_sobol_and_cells_out,
-  paste(plot_dir, "sobol_and_cells_out.pdf", sep = "/")
-)
-
-p_sobol_and_cells_net_change <-
-  p_sobol_indices_net_change_2 +
-    theme(legend.position = c(0.5, 0.80)) +
-    (
-      (p_net_change_panels[[1]] | p_net_change_panels[[2]]) /
-        (p_net_change_panels[[3]] + nudge_x_axis_label |
-          p_net_change_panels[[4]] + nudge_x_axis_label) +
-        plot_layout(guides = "collect") &
-        nudge_tag &
-        labs(y = "Net change")
-    ) +
-    plot_layout(widths = c(1.0 / 3.0, 2.0 / 3.0)) +
-    plot_annotation(tag_levels = "A") &
-    theme(
-      plot.tag = element_text(hjust = 0, vjust = 0)
-    )
-
-ggsave_with_defaults(
-  plot = p_sobol_and_cells_net_change,
-  paste(plot_dir, "sobol_and_cells_net_change.pdf", sep = "/")
+  plot = p_sobol_and_cells_combined,
+  paste(plot_dir, "sobol_and_cells_combined.pdf", sep = "/"),
+  width = 14,
+  height = 7
 )
