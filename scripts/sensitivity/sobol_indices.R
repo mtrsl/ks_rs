@@ -28,6 +28,8 @@ param_sample <- x$param_sample
 param_sample_dt <- x$param_sample_dt
 
 trace_data_full <- read_trace_data(param_sample_dt, res_dir_base)
+trace_data_full[, cell_outflux := `-F_{phi_{C_u}}(x=0)` + `-F_{phi_{C_b}}(x=0)` + `-F_{phi_{C_s}}(x=0)`]
+
 trace_data <- trace_data_full[`t_{inf}` >= 0]
 
 # add dimensional time so we can plot against it
@@ -42,27 +44,23 @@ cells_vs_params <- param_sample_dt[
     j_phi_i_i_factor,
     m_i_factor,
     t_j_phi_i_lag,
-    gamma,
     cells_in = integrated_fluxes[, cells_in],
     cells_out = integrated_fluxes[, cells_out],
     net_change = integrated_fluxes[, net_change]
   )
 ]
 
-cells_vs_params_long <- cells_vs_params %>%
+cells_vs_params_long <- cells_vs_params |>
   melt(
-    .,
     measure.vars = c(
       "j_phi_i_i_factor",
       "m_i_factor",
-      "t_j_phi_i_lag",
-      "gamma"
+      "t_j_phi_i_lag"
     ),
     variable.name = "param",
     value.name = "param_value"
-  ) %>%
+  ) |>
   melt(
-    .,
     measure.vars = c("cells_in", "cells_out", "net_change"),
     variable.name = "variable",
     value.name = "cells"
@@ -78,14 +76,15 @@ sobol_indices_cells_plot <- function(ind, title) {
       ymax = high.ci,
       group = sensitivity,
       shape = sensitivity,
-      colour = sensitivity)
-    ) +
+      colour = sensitivity
+    )
+  ) +
     geom_point(size = 3, position = position_dodge(width = 0.3)) +
     geom_errorbar(width = 0.2, position = position_dodge(width = 0.3)) +
     scale_x_discrete(labels = param_labels) +
     scale_shape_discrete(labels = c("Si" = "First", "Ti" = "Total")) +
     scale_colour_discrete(labels = c("Si" = "First", "Ti" = "Total")) +
-    coord_cartesian(ylim = c(0.0, 1.0)) +
+    coord_cartesian(ylim = c(0.0, 1.2)) +
     labs(
       x = NULL,
       y = "Sobol index",
@@ -148,8 +147,9 @@ p_sobol_indices_cells_net_change <- sobol_indices_cells_plot(
 p_sobol_indices_cells <- p_sobol_indices_cells_in +
   p_sobol_indices_cells_out +
   p_sobol_indices_cells_net_change +
-  plot_layout(guides = "collect") &
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+  plot_layout(guides = "collect", axes = "collect") &
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) &
+  background_grid()
 
 ggsave_with_defaults(
   plot = p_sobol_indices_cells,
@@ -306,13 +306,13 @@ ggsave_with_defaults(
 
 # Sobol indices as a function of time - general methods
 
-t_inf_max <- trace_data %>%
-  .[, .(t_stop = max(`t_{inf}`)), by = rep] %>%
-  .[, min(t_stop)]
+t_inf_max <- trace_data |>
+  _[, .(t_stop = max(`t_{inf}`)), by = rep] |>
+  _[, min(t_stop)]
 
-output_inf_max <- trace_data %>%
-  .[, .(output_stop = max(output_inf)), by = rep] %>%
-  .[, min(output_stop)]
+output_inf_max <- trace_data |>
+  _[, .(output_stop = max(output_inf)), by = rep] |>
+  _[, min(output_stop)]
 
 # checks that the t_inf values for different reps are essentially equal
 check_t_infs <- function() {
@@ -321,10 +321,11 @@ check_t_infs <- function() {
   }
 
   compare_t_infs <- function(i, j) {
-    (abs(get_t_inf(i) - get_t_inf(j)) <= 1e-4) %>% all
+    (abs(get_t_inf(i) - get_t_inf(j)) <= 1e-4) |> all()
   }
 
-  for (i in 2:599) {
+  for (i in 2:(nrow(param_sample_dt) - 1)) {
+    print(i)
     if (!compare_t_infs(1, i)) {
       print(paste0("1 and ", i, " t_infs differ more than 1e-4"))
     }
@@ -383,7 +384,7 @@ flux_sobol_indices <- list()
 if (!file.exists(paste(res_dir_base, "flux_sobol_indices.rds", sep = "/"))) {
   for (i in 1:output_inf_max) {
     print(i)
-    results <- sobol_at_time(trace_data, i, `-F_{phi_{C_b}}(x=0)`)
+    results <- sobol_at_time(trace_data, i, cell_outflux)
 
     t_inf <- trace_data[output_inf == i & rep == 1, `t_{inf}`]
     results[, `t_{inf}` := t_inf]
@@ -821,17 +822,17 @@ parameter_pairs_plot <- function(data) {
 flux_local_maxima <- trace_data[,
   .SD[find_local_maxima_indices(`-F_{phi_{C_b}}(x=0)`)],
   by = rep
-] %>%
-  .[, extrema_id := 1:.N, by = rep] %>%
-  .[, extrema_type := factor("maximum")]
+] |>
+  _[, extrema_id := 1:.N, by = rep] |>
+  _[, extrema_type := factor("maximum")]
 
 # Find the local minima of the flux for each rep
 flux_local_minima <- trace_data[,
   .SD[find_local_minima_indices(`-F_{phi_{C_b}}(x=0)`)],
   by = rep
-] %>%
-  .[, extrema_id := 1:.N, by = rep] %>%
-  .[, extrema_type := factor("minimum")]
+] |>
+  _[, extrema_id := 1:.N, by = rep] |>
+  _[, extrema_type := factor("minimum")]
 
 flux_local_extrema <- rbind(flux_local_maxima, flux_local_minima)
 
@@ -883,14 +884,14 @@ ggplot(
   background_grid()
 
 # Find the reps that have only one local maximum
-flux_single_max <- flux_local_maxima %>%
-  .[, .SD[which.max(extrema_id)], by = rep] %>%
-  .[extrema_id == 1]
+flux_single_max <- flux_local_maxima |>
+  _[, .SD[which.max(extrema_id)], by = rep] |>
+  _[extrema_id == 1]
 
 # Find the reps that have only one local minimum
-flux_single_min <- flux_local_minima %>%
-  .[, .SD[which.max(extrema_id)], by = rep] %>%
-  .[extrema_id == 1]
+flux_single_min <- flux_local_minima |>
+  _[, .SD[which.max(extrema_id)], by = rep] |>
+  _[extrema_id == 1]
 
 # Bindi's suggested max/min thresholds
 
@@ -1036,7 +1037,7 @@ ggplot(
 # Find the ids of all reps that have no local minima
 
 # First get the reps that do have minima
-reps_w_some_minima <- flux_local_minima[, .(rep)] %>% unique
+reps_w_some_minima <- flux_local_minima[, .(rep)] |> unique()
 
 # Then take the complement. There's definitely a better way to do this but this
 # works...
@@ -1065,10 +1066,10 @@ parameter_pairs_plot(trace_data[rep %in% reps_w_no_min_but_max_50])
 flux_w_max_min_ratio <- flux_local_extrema[
   `t_{inf}` < 50 & extrema_id == 1,
   .(rep, `-F_{phi_{C_b}}(x=0)`, extrema_type)
-] %>%
-  dcast(., ... ~ extrema_type, value.var = c("-F_{phi_{C_b}}(x=0)")) %>%
-  .[, ratio_max_min := maximum / minimum] %>%
-  na.omit
+] |>
+  dcast(... ~ extrema_type, value.var = c("-F_{phi_{C_b}}(x=0)")) |>
+  _[, ratio_max_min := maximum / minimum] |>
+  na.omit()
 
 ggplot(flux_w_max_min_ratio, aes(x = ratio_max_min)) +
   #geom_density() +
@@ -1194,15 +1195,13 @@ trace_data_relevant_longer <- trace_data[
     rep, `t_{inf}`, t_inf_h, `C_b^{tot}`, `phi_{C_b}^{tot}`,
     `-F_{phi_{C_b}}(x=0)`, j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag, gamma
   )
-  ] %>%
+  ] |>
   melt(
-    .,
     measure.vars = c(
       "C_b^{tot}", "phi_{C_b}^{tot}", "-F_{phi_{C_b}}(x=0)"
     )
-  ) %>%
+  ) |>
   melt(
-    .,
     measure.vars = c(
       "j_phi_i_i_factor", "m_i_factor", "t_j_phi_i_lag", "gamma"
     ),
@@ -1217,7 +1216,7 @@ p_relevant_trace_grid <- ggplot(
     y = value,
   )
 )
-for (param_name in trace_data_relevant_longer$param %>% levels) {
+for (param_name in trace_data_relevant_longer$param |> levels()) {
   p_relevant_trace_grid <- p_relevant_trace_grid +
     geom_line(
       aes(
@@ -1358,7 +1357,7 @@ interp_irregular_data <- function(x, y, z) {
 
 plot_irregular_data <- function(x, y, z) {
   ggplot(
-    data.table::data.table(x = x, y = y, z = z) %>% unique,
+    data.table::data.table(x = x, y = y, z = z) |> unique(),
     aes(x = x, y = y, colour = z)
   ) +
     geom_point()
