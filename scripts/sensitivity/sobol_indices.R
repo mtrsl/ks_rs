@@ -230,38 +230,39 @@ ggsave_with_defaults(
   #p
 #}
 
+rep_sample <- sample(0:nrow(param_sample_dt), min(nrow(param_sample_dt), 1000)) |> sort()
+
+# Just plot the total amounts of the variables first
+# TODO this is hacky and involves copying a lot of code - make it better?
+
 trace_data_longer <- trace_data[
-  ,
+  rep %in% rep_sample,
   .(
-    rep, `t_{inf}`, `C_b^{tot}`, `phi_{C_b}^{tot}`, `-F_{phi_{C_b}}(x=0)`,
-    j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag, gamma
+    rep, `t`, `t_{inf}`, `C_u^{tot}`, `C_b^{tot}`, `C_s^{tot}`, `phi_{C_u}^{tot}`, `phi_{C_b}^{tot}`, `phi_{C_s}^{tot}`, `J^{tot}`,
+    j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag
   )
-  ] %>%
+  ] |>
   melt(
-    .,
     measure.vars = c(
-      "C_b^{tot}", "phi_{C_b}^{tot}", "-F_{phi_{C_b}}(x=0)"
+      "C_u^{tot}", "C_b^{tot}", "C_s^{tot}", "phi_{C_u}^{tot}", "phi_{C_b}^{tot}", "phi_{C_s}^{tot}", "J^{tot}"
     )
-  ) %>%
+  ) |>
   melt(
-    .,
     measure.vars = c(
-      "j_phi_i_i_factor", "m_i_factor", "t_j_phi_i_lag", "gamma"
+      "j_phi_i_i_factor", "m_i_factor", "t_j_phi_i_lag"
     ),
     variable.name = "param",
     value.name = "param_value"
   )
 
-rep_sample <- sample(0:nrow(param_sample_dt), 1000)
-
 p_trace_grid <- ggplot(
-  trace_data_longer[rep %in% rep_sample],
+  trace_data_longer,
   aes(
     x = `t_{inf}`,
     y = value,
   )
 )
-for (param_name in trace_data_longer$param %>% levels) {
+for (param_name in trace_data_longer$param |> levels()) {
   p_trace_grid <- p_trace_grid +
     geom_line(
       aes(
@@ -269,8 +270,10 @@ for (param_name in trace_data_longer$param %>% levels) {
         colour = param_value
       ),
       alpha = 0.2,
-      data = trace_data_longer[rep %in% rep_sample & param == param_name]
+      linewidth = 0.5,
+      data = trace_data_longer[param == param_name]
     ) +
+    geom_vline(xintercept = 50, alpha = 0.5) +
     colour_scales[param_name] +
     labs(colour = param_labels_words_no_breaks[param_name]) +
     new_scale_colour()
@@ -300,9 +303,238 @@ p_trace_grid <- p_trace_grid +
   )
 
 ggsave_with_defaults(
-  paste(plot_dir, "trace_grid.png", sep = "/"),
+  paste(plot_dir, "trace_grid_totals.png", sep = "/"),
   plot = p_trace_grid
 )
+
+# Now plot just the fluxes
+trace_data_longer <- trace_data[
+  rep %in% rep_sample,
+  .(
+    rep, `t`, `t_{inf}`,
+    `-F_{phi_{C_u}}(x=0)`, `-F_{phi_{C_b}}(x=0)`, `-F_{phi_{C_s}}(x=0)`, `cell_outflux`,
+    j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag
+  )
+  ] |>
+  melt(
+    measure.vars = c(
+      "-F_{phi_{C_u}}(x=0)", "-F_{phi_{C_b}}(x=0)", "-F_{phi_{C_s}}(x=0)", "cell_outflux"
+    )
+  ) |>
+  melt(
+    measure.vars = c(
+      "j_phi_i_i_factor", "m_i_factor", "t_j_phi_i_lag"
+    ),
+    variable.name = "param",
+    value.name = "param_value"
+  )
+
+p_trace_grid <- ggplot(
+  trace_data_longer,
+  aes(
+    x = `t_{inf}`,
+    y = value,
+  )
+)
+for (param_name in trace_data_longer$param |> levels()) {
+  p_trace_grid <- p_trace_grid +
+    geom_line(
+      aes(
+        group = rep,
+        colour = param_value
+      ),
+      alpha = 0.2,
+      linewidth = 0.5,
+      data = trace_data_longer[param == param_name]
+    ) +
+    geom_vline(xintercept = 50, alpha = 0.5) +
+    colour_scales[param_name] +
+    labs(colour = param_labels_words_no_breaks[param_name]) +
+    new_scale_colour()
+}
+p_trace_grid <- p_trace_grid +
+  labs(x = "Time since inflammation", y = NULL) +
+  facet_grid(
+    rows = vars(variable),
+    cols = vars(param),
+    scales = "free",
+    switch = "y",
+    labeller = as_labeller(function(v) all_labels[v], label_parsed)
+  ) +
+  theme_cowplot() +
+  theme(
+    plot.background = element_rect("white"),
+    strip.text.x = element_blank(),
+    strip.background = element_blank(),
+    strip.placement = "outside",
+    legend.box.just = "bottom",
+    legend.position = "top",
+    legend.justification = "centre",
+    # no idea why 1/24 seems to be correct here given that "npc" units mean
+    # that surely it should be 0.25, but who cares
+    legend.key.width = unit(1.0 / 24.0, "npc"),
+    legend.key.height = unit(0.3, "cm")
+  )
+
+ggsave_with_defaults(
+  paste(plot_dir, "trace_grid_fluxes.png", sep = "/"),
+  plot = p_trace_grid
+)
+
+# ************************************************************
+# Plots also including pe and gamma - just for "special" runs!
+# ************************************************************
+
+# Just plot the total amounts of the variables first
+trace_data_longer <- trace_data[
+  rep %in% rep_sample,
+  .(
+    rep, `t`, `t_{inf}`, `C_u^{tot}`, `C_b^{tot}`, `C_s^{tot}`, `phi_{C_u}^{tot}`, `phi_{C_b}^{tot}`, `phi_{C_s}^{tot}`, `J^{tot}`,
+    j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag, pe, gamma
+  )
+  ] |>
+  melt(
+    measure.vars = c(
+      "C_u^{tot}", "C_b^{tot}", "C_s^{tot}", "phi_{C_u}^{tot}", "phi_{C_b}^{tot}", "phi_{C_s}^{tot}", "J^{tot}"
+    )
+  ) |>
+  melt(
+    measure.vars = c(
+      "j_phi_i_i_factor", "m_i_factor", "t_j_phi_i_lag", "pe", "gamma"
+    ),
+    variable.name = "param",
+    value.name = "param_value"
+  )
+
+p_trace_grid <- ggplot(
+  trace_data_longer,
+  aes(
+    x = `t_{inf}`,
+    y = value,
+  )
+)
+for (param_name in trace_data_longer$param |> levels()) {
+  p_trace_grid <- p_trace_grid +
+    geom_line(
+      aes(
+        group = rep,
+        colour = param_value
+      ),
+      alpha = 0.2,
+      linewidth = 0.5,
+      data = trace_data_longer[param == param_name]
+    ) +
+    geom_vline(xintercept = 50, alpha = 0.5) +
+    colour_scales[param_name] +
+    labs(colour = param_labels_words_no_breaks[param_name]) +
+    new_scale_colour()
+}
+p_trace_grid <- p_trace_grid +
+  labs(x = "Time since inflammation", y = NULL) +
+  facet_grid(
+    rows = vars(variable),
+    cols = vars(param),
+    scales = "free",
+    switch = "y",
+    labeller = as_labeller(function(v) all_labels[v], label_parsed)
+  ) +
+  theme_cowplot() +
+  theme(
+    plot.background = element_rect("white"),
+    strip.text.x = element_blank(),
+    strip.background = element_blank(),
+    strip.placement = "outside",
+    legend.box.just = "bottom",
+    legend.position = "top",
+    legend.justification = "centre",
+    # no idea why 1/24 seems to be correct here given that "npc" units mean
+    # that surely it should be 0.25, but who cares
+    legend.key.width = unit(1.0 / 35.0, "npc"),
+    legend.key.height = unit(0.3, "cm")
+  )
+
+ggsave_with_defaults(
+  paste(plot_dir, "trace_grid_totals_pe_gamma.png", sep = "/"),
+  plot = p_trace_grid
+)
+
+# Now plot just the fluxes
+trace_data_longer <- trace_data[
+  rep %in% rep_sample,
+  .(
+    rep, `t`, `t_{inf}`,
+    `-F_{phi_{C_u}}(x=0)`, `-F_{phi_{C_b}}(x=0)`, `-F_{phi_{C_s}}(x=0)`, `cell_outflux`,
+    j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag, pe, gamma
+  )
+  ] |>
+  melt(
+    measure.vars = c(
+      "-F_{phi_{C_u}}(x=0)", "-F_{phi_{C_b}}(x=0)", "-F_{phi_{C_s}}(x=0)", "cell_outflux"
+    )
+  ) |>
+  melt(
+    measure.vars = c(
+      "j_phi_i_i_factor", "m_i_factor", "t_j_phi_i_lag", "pe", "gamma"
+    ),
+    variable.name = "param",
+    value.name = "param_value"
+  )
+
+p_trace_grid <- ggplot(
+  trace_data_longer,
+  aes(
+    x = `t_{inf}`,
+    y = value,
+  )
+)
+for (param_name in trace_data_longer$param |> levels()) {
+  p_trace_grid <- p_trace_grid +
+    geom_line(
+      aes(
+        group = rep,
+        colour = param_value
+      ),
+      alpha = 0.5,
+      linewidth = 0.5,
+      data = trace_data_longer[param == param_name]
+    ) +
+    geom_vline(xintercept = 50, alpha = 0.5) +
+    colour_scales[param_name] +
+    labs(colour = param_labels_words_no_breaks[param_name]) +
+    new_scale_colour()
+}
+p_trace_grid <- p_trace_grid +
+  labs(x = "Time", y = NULL) +
+  facet_grid(
+    rows = vars(variable),
+    cols = vars(param),
+    scales = "free",
+    switch = "y",
+    labeller = as_labeller(function(v) all_labels[v], label_parsed)
+  ) +
+  theme_cowplot() +
+  theme(
+    plot.background = element_rect("white"),
+    strip.text.x = element_blank(),
+    strip.background = element_blank(),
+    strip.placement = "outside",
+    legend.box.just = "bottom",
+    legend.position = "top",
+    legend.justification = "centre",
+    # no idea why 1/24 seems to be correct here given that "npc" units mean
+    # that surely it should be 0.25, but who cares
+    legend.key.width = unit(1.0 / 35.0, "npc"),
+    legend.key.height = unit(0.3, "cm")
+  )
+
+ggsave_with_defaults(
+  paste(plot_dir, "trace_grid_fluxes_pe_gamma.png", sep = "/"),
+  plot = p_trace_grid
+)
+
+# END of hacky trace plot bit
+
+
 
 # Sobol indices as a function of time - general methods
 
