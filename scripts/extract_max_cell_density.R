@@ -40,28 +40,38 @@ get_max_single <- function(rep_id) {
   # likely to be close to each other, and it only matters when considering the
   # maximum as a function of space.
 
-  # Find the maximum of phi_C_b at each time and save all variables at that
-  # time
+  # Find the maximum of phi_C_{u,b,s} at each time and save all variables at
+  # that time
+  phi_c_u_data <- data[data[, .I[phi_C_u == max(phi_C_u)][1], by = time_inf]$V1]
   phi_c_b_data <- data[data[, .I[phi_C_b == max(phi_C_b)][1], by = time_inf]$V1]
+  phi_c_s_data <- data[data[, .I[phi_C_s == max(phi_C_s)][1], by = time_inf]$V1]
 
   # add cell indices
   data[, cell := (1:.N - 1) %/% 2, by = time_inf]
 
   # calcuate the gradient of C_b within each cell
+  dc_u_dx <- data[, .(dC_u_dx = diff(C_u) / diff(x)), by = .(time_inf, cell)]
   dc_b_dx <- data[, .(dC_b_dx = diff(C_b) / diff(x)), by = .(time_inf, cell)]
+  dc_s_dx <- data[, .(dC_s_dx = diff(C_s) / diff(x)), by = .(time_inf, cell)]
 
   # calculate the means of all other quantities within each cell, and add the
-  # gradient to this new table
+  # gradients to this new table
   data <- data[, lapply(.SD, mean), by = .(time_inf, cell)]
-  data <- cbind(data, dc_b_dx[, .(dC_b_dx)])
+  data <- cbind(data, dc_u_dx[, .(dC_u_dx)], dc_b_dx[, .(dC_b_dx)], dc_s_dx[, .(dC_s_dx)])
 
-  # find the maximum gradient of C_b within each (computational) cell at each
-  # time and save values of all variables at that time
+  # find the maximum gradient of C_{u,b,s} within each (computational) cell at
+  # each time and save values of all variables at that time
+  dc_u_dx_data <- data[
+    data[, .I[abs(dC_u_dx) == max(abs(dC_u_dx))][1], by = time_inf]$V1
+  ]
   dc_b_dx_data <- data[
     data[, .I[abs(dC_b_dx) == max(abs(dC_b_dx))][1], by = time_inf]$V1
   ]
+  dc_s_dx_data <- data[
+    data[, .I[abs(dC_s_dx) == max(abs(dC_s_dx))][1], by = time_inf]$V1
+  ]
 
-  list(phi_c_b_data, dc_b_dx_data)
+  list(phi_c_u_data, phi_c_b_data, phi_c_s_data, dc_u_dx_data, dc_b_dx_data, dc_s_dx_data)
 }
 
 #library(parallel)
@@ -72,15 +82,38 @@ get_max_single <- function(rep_id) {
   #all_max_data <- mclapply(1:n_rep, get_max_single)
 #)
 
-#max_phi_c_b_all <- lapply(1:n_rep, function(i) all_max_data[[i]][[1]])
-#max_dc_b_dx_all <- lapply(1:n_rep, function(i) all_max_data[[i]][[2]])
+#max_phi_c_u_all <- lapply(1:n_rep, function(i) all_max_data[[i]][[1]])
+#max_phi_c_b_all <- lapply(1:n_rep, function(i) all_max_data[[i]][[2]])
+#max_phi_c_s_all <- lapply(1:n_rep, function(i) all_max_data[[i]][[3]])
+#max_dc_u_dx_all <- lapply(1:n_rep, function(i) all_max_data[[i]][[4]])
+#max_dc_b_dx_all <- lapply(1:n_rep, function(i) all_max_data[[i]][[5]])
+#max_dc_s_dx_all <- lapply(1:n_rep, function(i) all_max_data[[i]][[6]])
 
+#max_phi_c_u_all <- rbindlist(max_phi_c_u_all)
 #max_phi_c_b_all <- rbindlist(max_phi_c_b_all)
+#max_phi_c_s_all <- rbindlist(max_phi_c_s_all)
+#max_dc_u_dx_all <- rbindlist(max_dc_u_dx_all)
 #max_dc_b_dx_all <- rbindlist(max_dc_b_dx_all)
+#max_dc_s_dx_all <- rbindlist(max_dc_s_dx_all)
 
+#fwrite(
+  #max_phi_c_u_all,
+  #paste(res_dir_base, "max_phi_c_u_all.csv", sep = "/"),
+  #sep = " "
+#)
 #fwrite(
   #max_phi_c_b_all,
   #paste(res_dir_base, "max_phi_c_b_all.csv", sep = "/"),
+  #sep = " "
+#)
+#fwrite(
+  #max_phi_c_s_all,
+  #paste(res_dir_base, "max_phi_c_s_all.csv", sep = "/"),
+  #sep = " "
+#)
+#fwrite(
+  #max_dc_u_dx_all,
+  #paste(res_dir_base, "max_dc_u_dx_all.csv", sep = "/"),
   #sep = " "
 #)
 #fwrite(
@@ -88,9 +121,18 @@ get_max_single <- function(rep_id) {
   #paste(res_dir_base, "max_dc_b_dx_all.csv", sep = "/"),
   #sep = " "
 #)
+#fwrite(
+  #max_dc_s_dx_all,
+  #paste(res_dir_base, "max_dc_s_dx_all.csv", sep = "/"),
+  #sep = " "
+#)
 
+max_phi_c_u_all <- fread(paste(res_dir_base, "max_phi_c_u_all.csv", sep = "/"))
 max_phi_c_b_all <- fread(paste(res_dir_base, "max_phi_c_b_all.csv", sep = "/"))
+max_phi_c_s_all <- fread(paste(res_dir_base, "max_phi_c_s_all.csv", sep = "/"))
+max_dc_u_dx_all <- fread(paste(res_dir_base, "max_dc_u_dx_all.csv", sep = "/"))
 max_dc_b_dx_all <- fread(paste(res_dir_base, "max_dc_b_dx_all.csv", sep = "/"))
+max_dc_s_dx_all <- fread(paste(res_dir_base, "max_dc_s_dx_all.csv", sep = "/"))
 
 max_phi_c_b_all_and_params <- cbind(
   max_phi_c_b_all,
