@@ -270,7 +270,7 @@ for (param_name in trace_data_longer$param |> levels()) {
         colour = param_value
       ),
       alpha = 0.2,
-      linewidth = 0.5,
+      linewidth = 0.2,
       data = trace_data_longer[param == param_name]
     ) +
     geom_vline(xintercept = 50, alpha = 0.5) +
@@ -344,7 +344,7 @@ for (param_name in trace_data_longer$param |> levels()) {
         colour = param_value
       ),
       alpha = 0.2,
-      linewidth = 0.5,
+      linewidth = 0.2,
       data = trace_data_longer[param == param_name]
     ) +
     geom_vline(xintercept = 50, alpha = 0.5) +
@@ -671,6 +671,7 @@ flux_sobol_sums <- flux_sobol_indices[
 
 ggplot(flux_sobol_sums, aes(x = `t_{inf}`, y = sum, colour = sensitivity)) +
   geom_point() +
+  #scale_y_continuous(limits = c(-1, 2)) +
   theme_cowplot() +
   background_grid()
 
@@ -680,44 +681,159 @@ ggplot(flux_sobol_sums, aes(x = `t_{inf}`, y = sum, colour = sensitivity)) +
 
 source("scripts/extract_max_cell_density.R")
 
-gradient_sobol_indices <- list()
+# Sometimes starting at output_inf == 1 here doesn't work, presumably because
+# the gradient is constant everywhere at this time making the Sobol index
+# calculations fail? Start at output_inf == 2 to avoid this problem
 
-for (i in 1:output_inf_max) {
-  print(i)
-  results <- sobol_at_time(max_dc_b_dx_all_and_params, i, `dC_b_dx`)
+# C_u
 
-  t_inf <- trace_data[output_inf == i & rep == 1, `t_{inf}`]
-  results[, `t_{inf}` := t_inf]
+c_u_gradient_sobol_indices <- list()
 
-  gradient_sobol_indices[[i]] <- results
+if (!file.exists(paste(res_dir_base, "c_u_gradient_sobol_indices.rds", sep = "/"))) {
+  for (i in 2:output_inf_max) {
+    print(i)
+    results <- sobol_at_time(max_dc_u_dx_all_and_params, i, `dC_u_dx`)
+
+    t_inf <- trace_data[output_inf == i & rep == 1, `t_{inf}`]
+    results[, `t_{inf}` := t_inf]
+
+    c_u_gradient_sobol_indices[[i]] <- results
+  }
+
+  c_u_gradient_sobol_indices <- rbindlist(c_u_gradient_sobol_indices)
+
+  saveRDS(
+    c_u_gradient_sobol_indices,
+    paste(res_dir_base, "c_u_gradient_sobol_indices.rds", sep = "/")
+  )
+} else {
+  c_u_gradient_sobol_indices <- readRDS(
+    paste(res_dir_base, "c_u_gradient_sobol_indices.rds", sep = "/")
+  )
 }
 
-gradient_sobol_indices <- rbindlist(gradient_sobol_indices)
+# C_b
+
+c_b_gradient_sobol_indices <- list()
+
+if (!file.exists(paste(res_dir_base, "c_b_gradient_sobol_indices.rds", sep = "/"))) {
+  for (i in 2:output_inf_max) {
+    print(i)
+    results <- sobol_at_time(max_dc_b_dx_all_and_params, i, `dC_b_dx`)
+
+    t_inf <- trace_data[output_inf == i & rep == 1, `t_{inf}`]
+    results[, `t_{inf}` := t_inf]
+
+    c_b_gradient_sobol_indices[[i]] <- results
+  }
+
+  c_b_gradient_sobol_indices <- rbindlist(c_b_gradient_sobol_indices)
+
+  saveRDS(
+    c_b_gradient_sobol_indices,
+    paste(res_dir_base, "c_b_gradient_sobol_indices.rds", sep = "/")
+  )
+} else {
+  c_b_gradient_sobol_indices <- readRDS(
+    paste(res_dir_base, "c_b_gradient_sobol_indices.rds", sep = "/")
+  )
+}
+
+# C_s
+
+c_s_gradient_sobol_indices <- list()
+
+if (!file.exists(paste(res_dir_base, "c_s_gradient_sobol_indices.rds", sep = "/"))) {
+  for (i in 2:output_inf_max) {
+    print(i)
+    results <- sobol_at_time(max_dc_s_dx_all_and_params, i, `dC_s_dx`)
+
+    t_inf <- trace_data[output_inf == i & rep == 1, `t_{inf}`]
+    results[, `t_{inf}` := t_inf]
+
+    c_s_gradient_sobol_indices[[i]] <- results
+  }
+
+  c_s_gradient_sobol_indices <- rbindlist(c_s_gradient_sobol_indices)
+
+  saveRDS(
+    c_s_gradient_sobol_indices,
+    paste(res_dir_base, "c_s_gradient_sobol_indices.rds", sep = "/")
+  )
+} else {
+  c_s_gradient_sobol_indices <- readRDS(
+    paste(res_dir_base, "c_s_gradient_sobol_indices.rds", sep = "/")
+  )
+}
 
 # First order
 
-p_gradient_first_order <- p_sobol_vs_time(
-  gradient_sobol_indices[sensitivity == "Si"],
+p_c_u_gradient_first_order <- p_sobol_vs_time(
+  c_u_gradient_sobol_indices[sensitivity == "Si"],
+  "First-order Sobol index",
+  c(-0.1, 1.0)
+)
+
+p_c_b_gradient_first_order <- p_sobol_vs_time(
+  c_b_gradient_sobol_indices[sensitivity == "Si"],
+  "First-order Sobol index",
+  c(-0.1, 1.0)
+)
+
+p_c_s_gradient_first_order <- p_sobol_vs_time(
+  c_s_gradient_sobol_indices[sensitivity == "Si"],
   "First-order Sobol index",
   c(-0.1, 1.0)
 )
 
 ggsave_with_defaults(
-  plot = p_gradient_first_order,
-  paste(plot_dir, "gradient_first_order_sobol_indices.pdf", sep = "/")
+  plot = p_c_u_gradient_first_order,
+  paste(plot_dir, "c_u_gradient_first_order_sobol_indices.pdf", sep = "/")
+)
+
+ggsave_with_defaults(
+  plot = p_c_b_gradient_first_order,
+  paste(plot_dir, "c_b_gradient_first_order_sobol_indices.pdf", sep = "/")
+)
+
+ggsave_with_defaults(
+  plot = p_c_s_gradient_first_order,
+  paste(plot_dir, "c_s_gradient_first_order_sobol_indices.pdf", sep = "/")
 )
 
 # Total order
 
-p_gradient_total_order <- p_sobol_vs_time(
-  gradient_sobol_indices[sensitivity == "Ti"],
+p_c_u_gradient_total_order <- p_sobol_vs_time(
+  c_u_gradient_sobol_indices[sensitivity == "Ti"],
   "Total-order Sobol index",
-  c(0.0, 1.2)
+  c(0.0, 1.05)
+)
+
+p_c_b_gradient_total_order <- p_sobol_vs_time(
+  c_b_gradient_sobol_indices[sensitivity == "Ti"],
+  "Total-order Sobol index",
+  c(0.0, 1.05)
+)
+
+p_c_s_gradient_total_order <- p_sobol_vs_time(
+  c_s_gradient_sobol_indices[sensitivity == "Ti"],
+  "Total-order Sobol index",
+  c(0.0, 1.05)
 )
 
 ggsave_with_defaults(
-  plot = p_gradient_total_order,
-  paste(plot_dir, "gradient_total_order_sobol_indices.pdf", sep = "/")
+  plot = p_c_u_gradient_total_order,
+  paste(plot_dir, "c_u_gradient_total_order_sobol_indices.pdf", sep = "/")
+)
+
+ggsave_with_defaults(
+  plot = p_c_b_gradient_total_order,
+  paste(plot_dir, "c_b_gradient_total_order_sobol_indices.pdf", sep = "/")
+)
+
+ggsave_with_defaults(
+  plot = p_c_s_gradient_total_order,
+  paste(plot_dir, "c_s_gradient_total_order_sobol_indices.pdf", sep = "/")
 )
 
 # Max value and location of max value plots for phi_c_b and dc_b_dx
@@ -765,9 +881,8 @@ p_value_panel <- function(data, colour_by, colour_style, ylabel) {
 p_j_phi_i_i_factor <- p_location_panel(max_phi_c_b_all_and_params, j_phi_i_i_factor, blue)
 p_m_i_factor <- p_location_panel(max_phi_c_b_all_and_params, m_i_factor, red)
 p_t_j_phi_i_lag <- p_location_panel(max_phi_c_b_all_and_params, t_j_phi_i_lag, green)
-p_gamma <- p_location_panel(max_phi_c_b_all_and_params, gamma, orange)
 
-p_phi_c_b_location <- p_j_phi_i_i_factor + p_m_i_factor + p_t_j_phi_i_lag + p_gamma +
+p_phi_c_b_location <- p_j_phi_i_i_factor + p_m_i_factor + p_t_j_phi_i_lag +
   plot_annotation(
     title = expression(
       paste("Location of maxmimum ", phi[C[b]], " concentration")
@@ -793,9 +908,8 @@ p_phi_c_b_value_panel <- function(...) {
 p_j_phi_i_i_factor <- p_phi_c_b_value_panel(max_phi_c_b_all_and_params, j_phi_i_i_factor, blue)
 p_m_i_factor <- p_phi_c_b_value_panel(max_phi_c_b_all_and_params, m_i_factor, red)
 p_t_j_phi_i_lag <- p_phi_c_b_value_panel(max_phi_c_b_all_and_params, t_j_phi_i_lag, green)
-p_gamma <- p_phi_c_b_value_panel(max_phi_c_b_all_and_params, gamma, orange)
 
-p_phi_c_b_value <- p_j_phi_i_i_factor + p_m_i_factor + p_t_j_phi_i_lag + p_gamma +
+p_phi_c_b_value <- p_j_phi_i_i_factor + p_m_i_factor + p_t_j_phi_i_lag +
   plot_annotation(
     title = expression(
       paste("Value of maxmimum ", phi[C[b]], " concentration")
@@ -817,9 +931,8 @@ ggsave_with_defaults(
 p_j_phi_i_i_factor <- p_location_panel(max_dc_b_dx_all_and_params, j_phi_i_i_factor, blue)
 p_m_i_factor <- p_location_panel(max_dc_b_dx_all_and_params, m_i_factor, red)
 p_t_j_phi_i_lag <- p_location_panel(max_dc_b_dx_all_and_params, t_j_phi_i_lag, green)
-p_gamma <- p_location_panel(max_dc_b_dx_all_and_params, gamma, orange)
 
-p_dc_b_dx_location <- p_j_phi_i_i_factor + p_m_i_factor + p_t_j_phi_i_lag + p_gamma +
+p_dc_b_dx_location <- p_j_phi_i_i_factor + p_m_i_factor + p_t_j_phi_i_lag +
   plot_annotation(
     title = expression(
       paste("Location of maxmimum ", C[b], " gradient")
@@ -845,9 +958,8 @@ p_dc_b_dx_value_panel <- function(...) {
 p_j_phi_i_i_factor <- p_dc_b_dx_value_panel(max_dc_b_dx_all_and_params, j_phi_i_i_factor, blue)
 p_m_i_factor <- p_dc_b_dx_value_panel(max_dc_b_dx_all_and_params, m_i_factor, red)
 p_t_j_phi_i_lag <- p_dc_b_dx_value_panel(max_dc_b_dx_all_and_params, t_j_phi_i_lag, green)
-p_gamma <- p_dc_b_dx_value_panel(max_dc_b_dx_all_and_params, gamma, orange)
 
-p_dc_b_dx_value <- p_j_phi_i_i_factor + p_m_i_factor + p_t_j_phi_i_lag + p_gamma +
+p_dc_b_dx_value <- p_j_phi_i_i_factor + p_m_i_factor + p_t_j_phi_i_lag +
   plot_annotation(
     title = expression(
       paste("Value of maxmimum ", C[b], " gradient")
@@ -868,127 +980,80 @@ ggsave_with_defaults(
 
 # Get the rows corresponding to the (global) maximum cell flux across lymphatic
 # vessel
-trace_max_flux <- trace_data[, .SD[which.max(`-F_{phi_{C_b}}(x=0)`)], by = rep]
+trace_max_flux <- trace_data[, .SD[which.max(cell_outflux)], by = rep]
 
 trace_max_flux_long <- melt(
   trace_max_flux,
   measure.vars = c(
     "j_phi_i_i_factor",
     "m_i_factor",
-    "t_j_phi_i_lag",
-    "gamma"),
+    "t_j_phi_i_lag"),
   variable.name = "param",
   value.name = "param_value"
 )
 
 # Get the first local maximum assuming it's before t_inf = 50
 trace_max_flux_first <-
-  trace_data[`t_{inf}` < 49, .SD[which.max(`-F_{phi_{C_b}}(x=0)`)], by = rep]
+  trace_data[`t_{inf}` < 49, .SD[which.max(cell_outflux)], by = rep]
 
 trace_max_flux_first_long <- melt(
   trace_max_flux_first,
   measure.vars = c(
     "j_phi_i_i_factor",
     "m_i_factor",
-    "t_j_phi_i_lag",
-    "gamma"),
+    "t_j_phi_i_lag"),
   variable.name = "param",
   value.name = "param_value"
 )
 
 # Get the second local maximum assuming it's after t_inf = 50
 trace_max_flux_second <-
-  trace_data[`t_{inf}` >= 49, .SD[which.max(`-F_{phi_{C_b}}(x=0)`)], by = rep]
+  trace_data[`t_{inf}` >= 49, .SD[which.max(cell_outflux)], by = rep]
 
 trace_max_flux_second_long <- melt(
   trace_max_flux_second,
   measure.vars = c(
     "j_phi_i_i_factor",
     "m_i_factor",
-    "t_j_phi_i_lag",
-    "gamma"),
+    "t_j_phi_i_lag"),
   variable.name = "param",
   value.name = "param_value"
 )
 
 plot_max_flux <- function(max_data) {
-  p <- ggplot(
-    max_data,
-    aes(x = `t_{inf}`, y = `-F_{phi_{C_b}}(x=0)`)
-  )
-
-  panel <- function(param_str, new_scale_after = TRUE) {
-    p <<- p +
-      geom_point(
-        aes(colour = param_value),
-        data = max_data[param == param_str]
-      ) +
-      colour_scales[param_str] +
-      labs(colour = param_labels[param_str])
-
-    if (new_scale_after) {
-      p <<- p + new_scale_colour()
-    }
-  }
-  panel("j_phi_i_i_factor")
-  panel("m_i_factor")
-  panel("t_j_phi_i_lag")
-  panel("gamma", new_scale_after = FALSE)
-
-  p +
-    #scale_x_continuous(limits = c(0, 60), breaks = seq(0, 60, 5)) +
-    facet_wrap(
-      vars(param),
-      labeller = as_labeller(function(v) all_labels[v], label_parsed)
+  max_flux_panel <- function(param) {
+    ggplot(
+      trace_max_flux,
+      aes(x = `t_{inf}`, y = cell_outflux, colour = {{ param }})
     ) +
-    #scale_x_break(c(10, 48)) +
-    theme_cowplot() +
-    background_grid() +
-    #theme(
-      #strip.background = element_blank(),
-      #strip.text = element_blank()
-    #) +
-    labs(x = "Time since inflammation", y = "Max. cell flux at l.v.")
+      geom_point(size = 2) +
+      #scale_x_continuous(limits = c(0, 60), breaks = seq(0, 60, 5)) +
+      #scale_x_break(c(10, 48)) +
+      theme_cowplot() +
+      background_grid()
+  }
+
+  p_1 <- max_flux_panel(j_phi_i_i_factor) + blue
+  p_2 <- max_flux_panel(m_i_factor) + red
+  p_3 <- max_flux_panel(t_j_phi_i_lag) + green
+
+  p_1 + p_2 + p_3 + plot_layout(nrow = 3, ncol = 1, guides = "collect")
 }
 
-#plot_max_flux(trace_max_flux_second_long)
-p_max_flux <- plot_max_flux(trace_max_flux_long)
+p_max_flux <- plot_max_flux(trace_max_flux)
+#p_max_flux <- plot_max_flux(trace_max_flux_second)
 
 ggsave_with_defaults(
   plot = p_max_flux,
   paste(plot_dir, "max_flux.pdf", sep = "/")
 )
 
-#################
-# other way to do plots
-
-max_flux_panel <- function(param) {
-  ggplot(
-    trace_max_flux,
-    aes(x = `t_{inf}`, y = `-F_{phi_{C_b}}(x=0)`, colour = {{ param }})
-  ) +
-    geom_point(size = 2) +
-    scale_x_continuous(limits = c(0, 60), breaks = seq(0, 60, 5)) +
-    scale_x_break(c(10, 48)) +
-    theme_cowplot() +
-    background_grid()
-}
-
-p_1 <- max_flux_panel(j_phi_i_i_factor) + blue
-p_2 <- max_flux_panel(m_i_factor) + red
-p_3 <- max_flux_panel(t_j_phi_i_lag) + green
-p_4 <- max_flux_panel(gamma) + orange
-
-#((p_1 | p_2) / (p_3 | p_4)) + plot_layout(guides = "collect")
-
-aplot::plot_list(p_1, p_2, p_3, p_4, guides = "collect")
-
 trace_max_flux_full_traj <-
   trace_data[rep %in% trace_max_flux[`t_{inf}` < 20, rep]]
 
 ggplot(
   trace_max_flux_full_traj,
-  aes(x = `t_{inf}`, y = `-F_{phi_{C_b}}(x=0)`, group = rep)
+  aes(x = `t_{inf}`, y = cell_outflux, group = rep)
 ) +
   geom_line()
 
@@ -1024,7 +1089,7 @@ flux_trace_plot_subset <- function(subset_rep_ids) {
     trace_data[rep %in% subset_rep_ids],
     aes(
       x = t_inf_h,
-      y = `-F_{phi_{C_b}}(x=0)`,
+      y = cell_outflux,
       group = rep
     )
   ) +
@@ -1040,7 +1105,7 @@ flux_trace_plot_subset <- function(subset_rep_ids) {
 parameter_pairs_plot <- function(data) {
   ggpairs(
     data,
-    columns = c("j_phi_i_i_factor", "m_i_factor", "t_j_phi_i_lag", "gamma"),
+    columns = c("j_phi_i_i_factor", "m_i_factor", "t_j_phi_i_lag"),
     upper = "blank",
     diag = list(continuous = "barDiag"),
     progress = FALSE,
@@ -1052,7 +1117,7 @@ parameter_pairs_plot <- function(data) {
 
 # Find the local maxima of the flux for each rep
 flux_local_maxima <- trace_data[,
-  .SD[find_local_maxima_indices(`-F_{phi_{C_b}}(x=0)`)],
+  .SD[find_local_maxima_indices(cell_outflux)],
   by = rep
 ] |>
   _[, extrema_id := 1:.N, by = rep] |>
@@ -1060,7 +1125,7 @@ flux_local_maxima <- trace_data[,
 
 # Find the local minima of the flux for each rep
 flux_local_minima <- trace_data[,
-  .SD[find_local_minima_indices(`-F_{phi_{C_b}}(x=0)`)],
+  .SD[find_local_minima_indices(cell_outflux)],
   by = rep
 ] |>
   _[, extrema_id := 1:.N, by = rep] |>
@@ -1073,7 +1138,7 @@ ggplot(
   flux_local_extrema[extrema_id == 1],
   aes(
     x = t_inf_h,
-    y = `-F_{phi_{C_b}}(x=0)`,
+    y = cell_outflux,
     colour = extrema_type,
     #shape = extrema_type,
     group = rep
@@ -1096,7 +1161,7 @@ ggplot(
 # Plot all minima
 ggplot(
   flux_local_minima,
-  aes(x = `t_{inf}`, y = `-F_{phi_{C_b}}(x=0)`, colour = factor(extrema_id))
+  aes(x = `t_{inf}`, y = cell_outflux, colour = factor(extrema_id))
 ) +
   geom_point() +
   scale_x_continuous(limits = c(0, 55)) +
@@ -1106,7 +1171,7 @@ ggplot(
 # Plot all maxima
 ggplot(
   flux_local_maxima,
-  aes(x = `t_{inf}`, y = `-F_{phi_{C_b}}(x=0)`, colour = factor(extrema_id))
+  aes(x = `t_{inf}`, y = cell_outflux, colour = factor(extrema_id))
 ) +
   geom_point() +
   geom_vline(xintercept = 8 - 2) +
@@ -1199,9 +1264,8 @@ flux_local_al_2_maxima <- flux_local_al_2_maxima[
     j_phi_i_i_factor,
     m_i_factor,
     t_j_phi_i_lag,
-    gamma,
     extrema_id,
-    `-F_{phi_{C_b}}(x=0)`
+    cell_outflux
   )
 ]
 
@@ -1209,13 +1273,13 @@ flux_local_al_2_maxima <- flux_local_al_2_maxima[
 flux_local_al_2_maxima_wide <- dcast(
   flux_local_al_2_maxima,
   ... ~ extrema_id,
-  value.var = c("t_{inf}", "t_inf_h", "-F_{phi_{C_b}}(x=0)")
+  value.var = c("t_{inf}", "t_inf_h", "cell_outflux")
 )
 
 # calculate the ratio max_2/max_1
 flux_local_al_2_maxima_wide[
   ,
-  ratio_21 := `-F_{phi_{C_b}}(x=0)_2` / `-F_{phi_{C_b}}(x=0)_1`,
+  ratio_21 := cell_outflux_2 / cell_outflux_1,
   by = rep
 ]
 
@@ -1252,9 +1316,9 @@ ggplot(
 
 ggplot(
   trace_data_with_max_21_ratio,
-  aes(x = t_inf_h, y = `-F_{phi_{C_b}}(x=0)`, colour = ratio_21, group = rep)
+  aes(x = t_inf_h, y = cell_outflux, colour = ratio_21, group = rep)
 ) +
-  geom_line(alpha = 0.5, size = 1) +
+  geom_line(alpha = 0.5, size = 0.1) +
   scale_colour_distiller(palette = "Spectral") +
   labs(
     x = "Time since inflammation (h)",
@@ -1297,9 +1361,9 @@ parameter_pairs_plot(trace_data[rep %in% reps_w_no_min_but_max_50])
 # out using na.omit to leave just the reps we actually want.
 flux_w_max_min_ratio <- flux_local_extrema[
   `t_{inf}` < 50 & extrema_id == 1,
-  .(rep, `-F_{phi_{C_b}}(x=0)`, extrema_type)
+  .(rep, cell_outflux, extrema_type)
 ] |>
-  dcast(... ~ extrema_type, value.var = c("-F_{phi_{C_b}}(x=0)")) |>
+  dcast(... ~ extrema_type, value.var = c("cell_outflux")) |>
   _[, ratio_max_min := maximum / minimum] |>
   na.omit()
 
@@ -1322,7 +1386,7 @@ ggplot(
   trace_data_with_max_min_ratio,
   aes(
     x = `t_{inf}`,
-    y = `-F_{phi_{C_b}}(x=0)`,
+    y = cell_outflux,
     group = rep,
     colour = ratio_max_min
   )
@@ -1336,7 +1400,7 @@ ggplot(
   trace_data_with_max_min_ratio[ratio_max_min <= 1.1],
   aes(
     x = `t_{inf}`,
-    y = `-F_{phi_{C_b}}(x=0)`,
+    y = cell_outflux,
     group = rep,
     colour = ratio_max_min
   )
@@ -1357,7 +1421,7 @@ ggplot(
   trace_data[rep %in% reps_relevant],
   aes(
     x = `t_{inf}`,
-    y = `-F_{phi_{C_b}}(x=0)`,
+    y = cell_outflux,
     group = rep,
     #colour = ratio_max_min
   )
@@ -1398,12 +1462,12 @@ flux_trace_plot_subset(relevant_reps) +
   ) +
   geom_point(
     data = flux_local_al_2_maxima_wide[rep %in% relevant_reps],
-    aes(x = `t_inf_h_1`, y = `-F_{phi_{C_b}}(x=0)_1`),
+    aes(x = `t_inf_h_1`, y = cell_outflux_1),
     colour = "red"
   ) +
   geom_point(
     data = flux_local_al_2_maxima_wide[rep %in% relevant_reps],
-    aes(x = `t_inf_h_2`, y = `-F_{phi_{C_b}}(x=0)_2`),
+    aes(x = `t_inf_h_2`, y = cell_outflux_2),
     colour = "blue"
   ) +
   geom_vline(xintercept = 50 * 0.6944444444, linetype = "dashed")
@@ -1424,18 +1488,23 @@ parameter_pairs_plot(
 trace_data_relevant_longer <- trace_data[
   rep %in% relevant_reps,
   .(
-    rep, `t_{inf}`, t_inf_h, `C_b^{tot}`, `phi_{C_b}^{tot}`,
-    `-F_{phi_{C_b}}(x=0)`, j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag, gamma
+    rep, `t_{inf}`, t_inf_h,
+    `C_u^{tot}`, `C_b^{tot}`, `C_s^{tot}`,
+    `phi_{C_u}^{tot}`, `phi_{C_b}^{tot}`, `phi_{C_s}^{tot}`, 
+    `cell_outflux`,
+    j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag
   )
   ] |>
   melt(
     measure.vars = c(
-      "C_b^{tot}", "phi_{C_b}^{tot}", "-F_{phi_{C_b}}(x=0)"
+      "C_u^{tot}", "C_b^{tot}", "C_s^{tot}",
+      "phi_{C_u}^{tot}", "phi_{C_b}^{tot}", "phi_{C_s}^{tot}",
+      "cell_outflux"
     )
   ) |>
   melt(
     measure.vars = c(
-      "j_phi_i_i_factor", "m_i_factor", "t_j_phi_i_lag", "gamma"
+      "j_phi_i_i_factor", "m_i_factor", "t_j_phi_i_lag"
     ),
     variable.name = "param",
     value.name = "param_value"
@@ -1503,7 +1572,7 @@ setdiff(
 
 flux_local_al_2_maxima_wide_long_params <- melt(
   flux_local_al_2_maxima_wide,
-  measure.vars = c("j_phi_i_i_factor", "m_i_factor", "t_j_phi_i_lag", "gamma"),
+  measure.vars = c("j_phi_i_i_factor", "m_i_factor", "t_j_phi_i_lag"),
   variable.name = "param",
   value.name = "param_value"
 )
@@ -1514,7 +1583,7 @@ quantity_vs_param_plot <- function(quantity, colour_by = NULL) {
     # we can use their values for e.g. colouring
     flux_local_al_2_maxima_wide_long_params[
       flux_local_al_2_maxima_wide[,
-        .(rep, j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag, gamma)
+        .(rep, j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag)
       ],
       on = "rep"
     ],
@@ -1557,63 +1626,20 @@ quantity_vs_param_plot <- function(quantity, colour_by = NULL) {
 quantity_vs_param_plot(t_inf_h_1, j_phi_i_i_factor)
 quantity_vs_param_plot(t_inf_h_1, m_i_factor)
 quantity_vs_param_plot(t_inf_h_1, t_j_phi_i_lag)
-quantity_vs_param_plot(t_inf_h_1, gamma)
 # => Time of first peak almost entirely controlled by m_i_factor. gamma appears
 # to have a much smaller influence, with some low gamma reps having slightly higher t_inf_h_1
 
 quantity_vs_param_plot(t_inf_h_2, j_phi_i_i_factor)
 quantity_vs_param_plot(t_inf_h_2, m_i_factor)
 quantity_vs_param_plot(t_inf_h_2, t_j_phi_i_lag)
-quantity_vs_param_plot(t_inf_h_2, gamma)
 
-quantity_vs_param_plot(`-F_{phi_{C_b}}(x=0)_1`, j_phi_i_i_factor)
-quantity_vs_param_plot(`-F_{phi_{C_b}}(x=0)_1`, m_i_factor)
-quantity_vs_param_plot(`-F_{phi_{C_b}}(x=0)_1`, t_j_phi_i_lag)
-quantity_vs_param_plot(`-F_{phi_{C_b}}(x=0)_1`, gamma)
+quantity_vs_param_plot(cell_outflux_1, j_phi_i_i_factor)
+quantity_vs_param_plot(cell_outflux_1, m_i_factor)
+quantity_vs_param_plot(cell_outflux_1, t_j_phi_i_lag)
 
-quantity_vs_param_plot(`-F_{phi_{C_b}}(x=0)_2`, j_phi_i_i_factor)
-quantity_vs_param_plot(`-F_{phi_{C_b}}(x=0)_2`, m_i_factor)
-quantity_vs_param_plot(`-F_{phi_{C_b}}(x=0)_2`, t_j_phi_i_lag)
-quantity_vs_param_plot(`-F_{phi_{C_b}}(x=0)_2`, gamma)
-
-interp_irregular_data <- function(x, y, z) {
-  grid <- interp::interp(x, y, z, duplicate = "drop")
-  subset(
-    data.table::data.table(
-      x = rep(grid$x, nrow(grid$z)),
-      y = rep(grid$y, each = ncol(grid$z)),
-      z = as.numeric(grid$z)),
-    !is.na(z)
-  )
-}
-
-plot_irregular_data <- function(x, y, z) {
-  ggplot(
-    data.table::data.table(x = x, y = y, z = z) |> unique(),
-    aes(x = x, y = y, colour = z)
-  ) +
-    geom_point()
-}
-
-with(
-  flux_local_al_2_maxima_wide,
-  #interp_irregular_data(j_phi_i_i_factor, `t_{inf}_1`, gamma)
-  plot_irregular_data(j_phi_i_i_factor, `t_{inf}_1`, gamma)
-)
-
-grid <- with(origdata, interp::interp(x, y, z))
-
-griddf <- subset(
-  data.frame(
-    x = rep(grid$x, nrow(grid$z)),
-    y = rep(grid$y, each = ncol(grid$z)),
-    z = as.numeric(grid$z)
-  ),
-  !is.na(z)
-)
-
-ggplot(griddf, aes(x, y, z = z)) +
-  geom_contour_filled()
+quantity_vs_param_plot(cell_outflux_2, j_phi_i_i_factor)
+quantity_vs_param_plot(cell_outflux_2, m_i_factor)
+quantity_vs_param_plot(cell_outflux_2, t_j_phi_i_lag)
 
 #####################
 
@@ -1622,12 +1648,13 @@ p_basic_flux <- ggplot(
   trace_data_with_max_21_ratio,
   aes(
     x = `t_{inf}`,
-    y = `-F_{phi_{C_b}}(x=0)`,
+    y = cell_outflux,
     group = rep,
     colour = j_phi_i_i_factor
   )
 ) +
   geom_line(alpha = 0.4, size = 0.6) +
+  scale_colour_distiller(palette = "Spectral") +
   theme_cowplot(font_size = 26) +
   theme(
     legend.position = c(0.80, 0.6),
@@ -1664,7 +1691,7 @@ ggsave(
 # Basic flux at 2nd peak vs j_phi_i_i_factor coloured by gamma plot
 p_basic_peak_vs_ingress_vs_gamma <- ggplot(
   flux_local_al_2_maxima[extrema_id == 2],
-  aes(x = j_phi_i_i_factor, y = `-F_{phi_{C_b}}(x=0)`, colour = gamma)
+  aes(x = j_phi_i_i_factor, y = cell_outflux, colour = gamma)
 ) +
   geom_point(size = 4, alpha = 0.6) +
   scale_colour_distiller(palette = "Spectral", guide = guide_colorbar(title.position = "left", title.hjust = 1.0, barheight = 7)) +
