@@ -75,29 +75,29 @@ param_labels_words_no_breaks <- c(
 
 # Add any other variables as needed
 variable_labels <- c(
-  "C_u" = expression(C[u]),
+  "C_u" = expression(C[f]),
   "C_b" = expression(C[b]),
-  "C_s" = expression(C[s]),
+  "C_s" = expression(C[t]),
   "phi_i" = expression(phi[i]),
   "phi_m" = expression(phi[m]),
-  "phi_C_u" = expression(phi[C[u]]),
+  "phi_C_u" = expression(phi[C[f]]),
   "phi_C_b" = expression(phi[C[b]]),
-  "phi_C_s" = expression(phi[C[s]]),
+  "phi_C_s" = expression(phi[C[t]]),
   "J" = expression(J),
-  "C_u^{tot}" = expression(paste("Total ", C[u])),
+  "C_u^{tot}" = expression(paste("Total ", C[f])),
   "C_b^{tot}" = expression(paste("Total ", C[b])),
-  "C_s^{tot}" = expression(paste("Total ", C[s])),
-  "phi_{C_u}^{tot}" = expression(paste("Total ", phi[C[u]])),
+  "C_s^{tot}" = expression(paste("Total ", C[t])),
+  "phi_{C_u}^{tot}" = expression(paste("Total ", phi[C[f]])),
   "phi_{C_b}^{tot}" = expression(paste("Total ", phi[C[b]])),
-  "phi_{C_s}^{tot}" = expression(paste("Total ", phi[C[s]])),
+  "phi_{C_s}^{tot}" = expression(paste("Total ", phi[C[t]])),
   "J^{tot}" = expression(paste("Total ", J)),
   "cell_outflux" = expression(paste("Cell LV flux")),
   "cells_in" = expression(paste("Cells in")),
   "cells_out" = expression(paste("Cells out")),
   "net_change" = expression(paste("Cells net change")),
-  "-F_{phi_{C_u}}(x=0)" = expression(paste(phi[C[u]], " outflux")),
+  "-F_{phi_{C_u}}(x=0)" = expression(paste(phi[C[f]], " outflux")),
   "-F_{phi_{C_b}}(x=0)" = expression(paste(phi[C[b]], " outflux")),
-  "-F_{phi_{C_s}}(x=0)" = expression(paste(phi[C[s]], " outflux"))
+  "-F_{phi_{C_s}}(x=0)" = expression(paste(phi[C[t]], " outflux"))
 )
 
 all_labels <- c(param_labels, variable_labels)
