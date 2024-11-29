@@ -35,6 +35,9 @@ trace_data <- trace_data_full[`t_{inf}` >= 0]
 # add dimensional time so we can plot against it
 trace_data[, t_inf_h := 0.6944444444 * `t_{inf}`]
 
+# vertical line at the time of end of inflammation (in hours)
+end_of_inf_vline_h <- geom_vline(xintercept = 50 * 0.6944444444, alpha = 0.5)
+
 # Trace plots
 #############
 
@@ -46,7 +49,8 @@ rep_sample <- sample(0:nrow(param_sample_dt), min(nrow(param_sample_dt), 1000)) 
 trace_data_longer <- trace_data[
   rep %in% rep_sample,
   .(
-    rep, `t`, `t_{inf}`, `C_u^{tot}`, `C_b^{tot}`, `C_s^{tot}`, `phi_{C_u}^{tot}`, `phi_{C_b}^{tot}`, `phi_{C_s}^{tot}`, `J^{tot}`,
+    rep, t, t_inf_h,
+    `C_u^{tot}`, `C_b^{tot}`, `C_s^{tot}`, `phi_{C_u}^{tot}`, `phi_{C_b}^{tot}`, `phi_{C_s}^{tot}`, `J^{tot}`,
     j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag
   )
   ] |>
@@ -66,7 +70,7 @@ trace_data_longer <- trace_data[
 p_trace_grid <- ggplot(
   trace_data_longer,
   aes(
-    x = `t_{inf}`,
+    x = t_inf_h,
     y = value,
   )
 )
@@ -81,13 +85,13 @@ for (param_name in trace_data_longer$param |> levels()) {
       linewidth = 0.2,
       data = trace_data_longer[param == param_name]
     ) +
-    geom_vline(xintercept = 50, alpha = 0.5) +
+    geom_vline(xintercept = 50 * 0.6944444444, alpha = 0.5) +
     colour_scales[param_name] +
     labs(colour = param_labels_words_no_breaks[param_name]) +
     new_scale_colour()
 }
 p_trace_grid <- p_trace_grid +
-  labs(x = "Time since inflammation", y = NULL) +
+  labs(x = "Time since inflammation (h)", y = NULL) +
   facet_grid(
     rows = vars(variable),
     cols = vars(param),
@@ -119,8 +123,8 @@ ggsave_with_defaults(
 trace_data_longer <- trace_data[
   rep %in% rep_sample,
   .(
-    rep, `t`, `t_{inf}`,
-    `-F_{phi_{C_u}}(x=0)`, `-F_{phi_{C_b}}(x=0)`, `-F_{phi_{C_s}}(x=0)`, `cell_outflux`,
+    rep, t, t_inf_h,
+    `-F_{phi_{C_u}}(x=0)`, `-F_{phi_{C_b}}(x=0)`, `-F_{phi_{C_s}}(x=0)`, cell_outflux,
     j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag
   )
   ] |>
@@ -140,7 +144,7 @@ trace_data_longer <- trace_data[
 p_trace_grid <- ggplot(
   trace_data_longer,
   aes(
-    x = `t_{inf}`,
+    x = t_inf_h,
     y = value,
   )
 )
@@ -155,13 +159,13 @@ for (param_name in trace_data_longer$param |> levels()) {
       linewidth = 0.2,
       data = trace_data_longer[param == param_name]
     ) +
-    geom_vline(xintercept = 50, alpha = 0.5) +
+    geom_vline(xintercept = 50 * 0.6944444444, alpha = 0.5) +
     colour_scales[param_name] +
     labs(colour = param_labels_words_no_breaks[param_name]) +
     new_scale_colour()
 }
 p_trace_grid <- p_trace_grid +
-  labs(x = "Time since inflammation", y = NULL) +
+  labs(x = "Time since inflammation (h)", y = NULL) +
   facet_grid(
     rows = vars(variable),
     cols = vars(param),
@@ -197,7 +201,8 @@ ggsave_with_defaults(
 trace_data_longer <- trace_data[
   rep %in% rep_sample,
   .(
-    rep, `t`, `t_{inf}`, `C_u^{tot}`, `C_b^{tot}`, `C_s^{tot}`, `phi_{C_u}^{tot}`, `phi_{C_b}^{tot}`, `phi_{C_s}^{tot}`, `J^{tot}`,
+    rep, t, t_inf_h,
+    `C_u^{tot}`, `C_b^{tot}`, `C_s^{tot}`, `phi_{C_u}^{tot}`, `phi_{C_b}^{tot}`, `phi_{C_s}^{tot}`, `J^{tot}`,
     j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag, pe, gamma
   )
   ] |>
@@ -217,7 +222,7 @@ trace_data_longer <- trace_data[
 p_trace_grid <- ggplot(
   trace_data_longer,
   aes(
-    x = `t_{inf}`,
+    x = t_inf_h,
     y = value,
   )
 )
@@ -232,13 +237,13 @@ for (param_name in trace_data_longer$param |> levels()) {
       linewidth = 0.5,
       data = trace_data_longer[param == param_name]
     ) +
-    geom_vline(xintercept = 50, alpha = 0.5) +
+    geom_vline(xintercept = 50 * 0.6944444444, alpha = 0.5) +
     colour_scales[param_name] +
     labs(colour = param_labels_words_no_breaks[param_name]) +
     new_scale_colour()
 }
 p_trace_grid <- p_trace_grid +
-  labs(x = "Time since inflammation", y = NULL) +
+  labs(x = "Time since inflammation (h)", y = NULL) +
   facet_grid(
     rows = vars(variable),
     cols = vars(param),
@@ -270,8 +275,8 @@ ggsave_with_defaults(
 trace_data_longer <- trace_data[
   rep %in% rep_sample,
   .(
-    rep, `t`, `t_{inf}`,
-    `-F_{phi_{C_u}}(x=0)`, `-F_{phi_{C_b}}(x=0)`, `-F_{phi_{C_s}}(x=0)`, `cell_outflux`,
+    rep, t, t_inf_h,
+    `-F_{phi_{C_u}}(x=0)`, `-F_{phi_{C_b}}(x=0)`, `-F_{phi_{C_s}}(x=0)`, cell_outflux,
     j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag, pe, gamma
   )
   ] |>
@@ -291,7 +296,7 @@ trace_data_longer <- trace_data[
 p_trace_grid <- ggplot(
   trace_data_longer,
   aes(
-    x = `t_{inf}`,
+    x = t_inf_h,
     y = value,
   )
 )
@@ -306,13 +311,16 @@ for (param_name in trace_data_longer$param |> levels()) {
       linewidth = 0.5,
       data = trace_data_longer[param == param_name]
     ) +
-    geom_vline(xintercept = 50, alpha = 0.5) +
+    geom_vline(xintercept = 50 * 0.6944444444, alpha = 0.5) +
     colour_scales[param_name] +
     labs(colour = param_labels_words_no_breaks[param_name]) +
     new_scale_colour()
 }
 p_trace_grid <- p_trace_grid +
-  labs(x = "Time", y = NULL) +
+  labs(
+    x = "Time since inflammation (h)",
+    y = NULL
+  ) +
   facet_grid(
     rows = vars(variable),
     cols = vars(param),
@@ -391,7 +399,8 @@ sobol_at_time <- function(data, output, variable) {
 p_sobol_vs_time <- function(sobol_data, title, ylim) {
   ggplot(
     sobol_data,
-    aes(x = `t_{inf}`, y = original, group = parameters, colour = parameters)
+    # I forgot to add the dimensional times when calculating sobol indices, so manually adjust here
+    aes(x = `t_{inf}` * 0.6944444444, y = original, group = parameters, colour = parameters)
   ) +
     geom_ribbon(
       aes(
@@ -403,8 +412,9 @@ p_sobol_vs_time <- function(sobol_data, title, ylim) {
       alpha = 0.2
     ) +
     geom_line() +
+    geom_vline(xintercept = 50 * 0.6944444444, alpha = 0.5) +
     labs(
-      x = "Time since inflammation",
+      x = "Time since inflammation (h)",
       y = title,
       colour = "Parameter",
       fill = "Parameter"
@@ -834,6 +844,7 @@ plot_max_flux <- function(max_data) {
       aes(x = `t_inf_h`, y = cell_outflux, colour = {{ param }})
     ) +
       geom_point(size = 2) +
+      geom_vline(xintercept = 50 * 0.6944444444, alpha = 0.5) +
       #scale_x_continuous(limits = c(0, 60), breaks = seq(0, 60, 5)) +
       #scale_x_break(c(10, 48)) +
       labs(
@@ -1291,7 +1302,7 @@ flux_trace_plot_subset(relevant_reps) +
     aes(x = `t_inf_h_2`, y = cell_outflux_2),
     colour = "blue"
   ) +
-  geom_vline(xintercept = 50 * 0.6944444444, linetype = "dashed")
+  geom_vline(xintercept = 50 * 0.6944444444, alpha = 0.5)
 
 #ggsave(
   #plot = last_plot(),
@@ -1461,8 +1472,6 @@ quantity_vs_param_plot <- function(quantity, y_label, colour_by) {
 quantity_vs_param_plot(t_inf_h_1, "Time of first peak (h)", j_phi_i_i_factor)
 quantity_vs_param_plot(t_inf_h_1, "Time of first peak (h)", m_i_factor)
 quantity_vs_param_plot(t_inf_h_1, "Time of first peak (h)", t_j_phi_i_lag)
-# => Time of first peak almost entirely controlled by m_i_factor. gamma appears
-# to have a much smaller influence, with some low gamma reps having slightly higher t_inf_h_1
 
 quantity_vs_param_plot(t_inf_h_2, "Time of second peak (h)", j_phi_i_i_factor)
 quantity_vs_param_plot(t_inf_h_2, "Time of second peak (h)", m_i_factor)
@@ -1482,13 +1491,14 @@ quantity_vs_param_plot(cell_outflux_2, "Cell LV flux at second peak", t_j_phi_i_
 p_basic_flux <- ggplot(
   trace_data_with_max_21_ratio,
   aes(
-    x = `t_{inf}`,
+    x = t_inf_h,
     y = cell_outflux,
     group = rep,
     colour = j_phi_i_i_factor
   )
 ) +
-  geom_line(alpha = 0.4, size = 0.6) +
+  geom_line(alpha = 0.4, linewidth = 0.6) +
+  geom_vline(xintercept = 50 * 0.6944444444, alpha = 0.5, linewidth = 1) +
   scale_colour_distiller(palette = "Spectral") +
   theme_cowplot(font_size = 26) +
   theme(
@@ -1519,7 +1529,6 @@ ggsave(
   dpi = 150,
   bg = "white"
 )
-
 
 ################
 
