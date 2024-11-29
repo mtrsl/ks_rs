@@ -1024,20 +1024,34 @@ plot_max_flux <- function(max_data) {
   max_flux_panel <- function(param) {
     ggplot(
       trace_max_flux,
-      aes(x = `t_{inf}`, y = cell_outflux, colour = {{ param }})
+      aes(x = `t_inf_h`, y = cell_outflux, colour = {{ param }})
     ) +
       geom_point(size = 2) +
       #scale_x_continuous(limits = c(0, 60), breaks = seq(0, 60, 5)) +
       #scale_x_break(c(10, 48)) +
+      labs(
+        x = "Time since inflammation (h)",
+        y = variable_labels["cell_outflux"],
+        colour = param_labels_words[deparse(substitute(param))]
+      ) +
       theme_cowplot() +
-      background_grid()
+      background_grid() +
+      theme(legend.position = "top")
   }
 
   p_1 <- max_flux_panel(j_phi_i_i_factor) + blue
   p_2 <- max_flux_panel(m_i_factor) + red
   p_3 <- max_flux_panel(t_j_phi_i_lag) + green
 
-  p_1 + p_2 + p_3 + plot_layout(nrow = 3, ncol = 1, guides = "collect")
+  p_1 + p_2 + p_3 +
+    plot_layout(nrow = 3, ncol = 1, guides = "collect", axes = "collect_x") &
+    theme(
+      legend.position = "top",
+      legend.box.just = "bottom",
+      legend.justification = "centre",
+      legend.key.width = unit(1.0 / 24.0, "npc"),
+      legend.key.height = unit(0.3, "cm")
+    )
 }
 
 p_max_flux <- plot_max_flux(trace_max_flux)
@@ -1577,7 +1591,7 @@ flux_local_al_2_maxima_wide_long_params <- melt(
   value.name = "param_value"
 )
 
-quantity_vs_param_plot <- function(quantity, colour_by = NULL) {
+quantity_vs_param_plot <- function(quantity, y_label, colour_by) {
   p <- ggplot(
     # this join copies the un-melted parameter columns into the melted table so
     # we can use their values for e.g. colouring
@@ -1592,7 +1606,12 @@ quantity_vs_param_plot <- function(quantity, colour_by = NULL) {
   ) +
     geom_point(size = 4, alpha = 0.6) +
     #geom_hline(yintercept = 1) +
-    facet_wrap(vars(param), scales = "free") +
+    facet_wrap(
+      vars(param),
+      scales = "free",
+      labeller = as_labeller(function(v) param_labels_words_no_breaks[v]),
+      strip.position = "bottom"
+    ) +
     scale_colour_distiller(palette = "Spectral") +
     scale_x_continuous(trans = "log10",
       breaks = scales::trans_breaks("log10", function(x) 10^x),
@@ -1602,8 +1621,17 @@ quantity_vs_param_plot <- function(quantity, colour_by = NULL) {
       breaks = scales::trans_breaks("log10", function(x) 10^x),
       labels = scales::trans_format("log10", scales::math_format(10^.x))
     ) +
+    labs(
+      x = NULL,
+      y = y_label,
+      colour = param_labels_words_no_breaks[deparse(substitute(colour_by))]
+    ) +
     theme_cowplot() +
-    background_grid()
+    background_grid() +
+    theme(
+      strip.placement = "outside",
+      strip.background = element_blank()
+    )
 
   q_str <- gsub("[{}]", "", deparse(substitute(quantity)))
   c_str <- gsub("[{}]", "", deparse(substitute(colour_by)))
@@ -1623,23 +1651,23 @@ quantity_vs_param_plot <- function(quantity, colour_by = NULL) {
   p
 }
 
-quantity_vs_param_plot(t_inf_h_1, j_phi_i_i_factor)
-quantity_vs_param_plot(t_inf_h_1, m_i_factor)
-quantity_vs_param_plot(t_inf_h_1, t_j_phi_i_lag)
+quantity_vs_param_plot(t_inf_h_1, "Time of first peak (h)", j_phi_i_i_factor)
+quantity_vs_param_plot(t_inf_h_1, "Time of first peak (h)", m_i_factor)
+quantity_vs_param_plot(t_inf_h_1, "Time of first peak (h)", t_j_phi_i_lag)
 # => Time of first peak almost entirely controlled by m_i_factor. gamma appears
 # to have a much smaller influence, with some low gamma reps having slightly higher t_inf_h_1
 
-quantity_vs_param_plot(t_inf_h_2, j_phi_i_i_factor)
-quantity_vs_param_plot(t_inf_h_2, m_i_factor)
-quantity_vs_param_plot(t_inf_h_2, t_j_phi_i_lag)
+quantity_vs_param_plot(t_inf_h_2, "Time of second peak (h)", j_phi_i_i_factor)
+quantity_vs_param_plot(t_inf_h_2, "Time of second peak (h)", m_i_factor)
+quantity_vs_param_plot(t_inf_h_2, "Time of second peak (h)", t_j_phi_i_lag)
 
-quantity_vs_param_plot(cell_outflux_1, j_phi_i_i_factor)
-quantity_vs_param_plot(cell_outflux_1, m_i_factor)
-quantity_vs_param_plot(cell_outflux_1, t_j_phi_i_lag)
+quantity_vs_param_plot(cell_outflux_1, "Cell LV flux at second peak", j_phi_i_i_factor)
+quantity_vs_param_plot(cell_outflux_1, "Cell LV flux at second peak", m_i_factor)
+quantity_vs_param_plot(cell_outflux_1, "Cell LV flux at second peak", t_j_phi_i_lag)
 
-quantity_vs_param_plot(cell_outflux_2, j_phi_i_i_factor)
-quantity_vs_param_plot(cell_outflux_2, m_i_factor)
-quantity_vs_param_plot(cell_outflux_2, t_j_phi_i_lag)
+quantity_vs_param_plot(cell_outflux_2, "Cell LV flux at second peak", j_phi_i_i_factor)
+quantity_vs_param_plot(cell_outflux_2, "Cell LV flux at second peak", m_i_factor)
+quantity_vs_param_plot(cell_outflux_2, "Cell LV flux at second peak", t_j_phi_i_lag)
 
 #####################
 
