@@ -198,8 +198,7 @@ ggsave_with_defaults(
 # ************************************************************
 
 # Just plot the total amounts of the variables first
-trace_data_longer <- trace_data[
-  rep %in% rep_sample,
+trace_data_longer <- trace_data[,
   .(
     rep, t, t_inf_h,
     `C_u^{tot}`, `C_b^{tot}`, `C_s^{tot}`, `phi_{C_u}^{tot}`, `phi_{C_b}^{tot}`, `phi_{C_s}^{tot}`, `J^{tot}`,
@@ -272,8 +271,7 @@ ggsave_with_defaults(
 )
 
 # Now plot just the fluxes
-trace_data_longer <- trace_data[
-  rep %in% rep_sample,
+trace_data_longer <- trace_data[,
   .(
     rep, t, t_inf_h,
     `-F_{phi_{C_u}}(x=0)`, `-F_{phi_{C_b}}(x=0)`, `-F_{phi_{C_s}}(x=0)`, cell_outflux,
@@ -423,7 +421,7 @@ p_sobol_vs_time <- function(sobol_data, title, ylim) {
     scale_fill_discrete(labels = param_labels_words_no_breaks) +
     coord_cartesian(ylim = ylim) +
     theme_cowplot() +
-    theme(legend.text.align = 0)
+    theme(legend.text = element_text(hjust = 0))
 }
 
 # Sobol indices of cell outflux as a function of time
