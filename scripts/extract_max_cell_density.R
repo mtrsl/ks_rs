@@ -134,11 +134,31 @@ max_dc_u_dx_all <- fread(paste(res_dir_base, "max_dc_u_dx_all.csv", sep = "/"))
 max_dc_b_dx_all <- fread(paste(res_dir_base, "max_dc_b_dx_all.csv", sep = "/"))
 max_dc_s_dx_all <- fread(paste(res_dir_base, "max_dc_s_dx_all.csv", sep = "/"))
 
+# C_u
+max_phi_c_u_all_and_params <- cbind(
+  max_phi_c_u_all,
+  params[
+    max_phi_c_u_all[, rep + 1],
+    .(j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag)
+  ]
+)
+
+max_dc_u_dx_all_and_params <- cbind(
+  max_dc_u_dx_all,
+  params[
+    max_dc_u_dx_all[, rep + 1],
+    .(j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag)
+  ]
+)
+
+rm(max_phi_c_u_all, max_dc_u_dx_all)
+
+# C_b
 max_phi_c_b_all_and_params <- cbind(
   max_phi_c_b_all,
   params[
     max_phi_c_b_all[, rep + 1],
-    .(j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag, gamma)
+    .(j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag)
   ]
 )
 
@@ -146,6 +166,27 @@ max_dc_b_dx_all_and_params <- cbind(
   max_dc_b_dx_all,
   params[
     max_dc_b_dx_all[, rep + 1],
-    .(j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag, gamma)
+    .(j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag)
   ]
 )
+
+rm(max_phi_c_b_all, max_dc_b_dx_all)
+
+# C_s
+max_phi_c_s_all_and_params <- cbind(
+  max_phi_c_s_all,
+  params[
+    max_phi_c_s_all[, rep + 1],
+    .(j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag)
+  ]
+)
+
+max_dc_s_dx_all_and_params <- cbind(
+  max_dc_s_dx_all,
+  params[
+    max_dc_s_dx_all[, rep + 1],
+    .(j_phi_i_i_factor, m_i_factor, t_j_phi_i_lag)
+  ]
+)
+
+rm(max_phi_c_s_all, max_dc_s_dx_all)
