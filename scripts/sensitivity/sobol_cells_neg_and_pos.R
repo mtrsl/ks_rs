@@ -328,12 +328,6 @@ p_sobol_indices_cells_in <- plots[[4]]
 p_sobol_indices_cells_out <- plots[[5]]
 p_sobol_indices_net_change <- plots[[6]]
 
-## Hacks to get things to line up better
-#nudge_tag <- theme(plot.tag.position = c(-0.04, 1))
-#nudge_x_axis_label <- theme(
-  #axis.title.x = element_text(margin = margin(-88, 0, 0, 0))
-#)
-
 p_sobol_and_cells_combined <- p_sobol_indices_cells_in +
   labs(tag = "A", title = "Cells in") +
   plot_spacer() +
